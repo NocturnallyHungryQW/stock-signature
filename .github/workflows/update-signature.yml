@@ -3,7 +3,7 @@ name: Update and publish stock signature
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*3-59/10 * * * *"
 
 permissions:
   contents: write
