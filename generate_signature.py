@@ -62,7 +62,7 @@ def read_tickers() -> list[str]:
     for raw_line in TICKERS_FILE.read_text(encoding="utf-8").splitlines():
         symbol = raw_line.strip().upper()
 
-        # Ignore blank lines and comment lines.
+        # Ignore blank lines and comments.
         if symbol and not symbol.startswith("#"):
             tickers.append(symbol)
 
@@ -92,7 +92,7 @@ def fetch_yahoo_quote(symbol: str) -> tuple[float, float]:
     request = Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 stock-signature/1.1",
+            "User-Agent": "Mozilla/5.0 stock-signature/1.2",
             "Accept": "application/json",
         },
     )
@@ -114,12 +114,13 @@ def fetch_yahoo_quote(symbol: str) -> tuple[float, float]:
     meta = result.get("meta", {})
 
     price = meta.get("regularMarketPrice")
+
     previous_close = (
         meta.get("chartPreviousClose")
         or meta.get("previousClose")
     )
 
-    # Fallback to the most recent intraday close if needed.
+    # Fallback to most recent intraday close if needed.
     if price is None:
         closes = (
             result.get("indicators", {})
@@ -154,6 +155,23 @@ def fetch_yahoo_quote(symbol: str) -> tuple[float, float]:
 
 
 # =========================
+# DISPLAY SYMBOL
+# =========================
+
+def get_display_symbol(symbol: str) -> str:
+    """
+    Clean Yahoo-specific ticker suffixes for display.
+
+    Example:
+    GC=F -> GC
+    CL=F -> CL
+    NQ=F -> NQ
+    """
+
+    return symbol.removesuffix("=F")
+
+
+# =========================
 # IMAGE GENERATION
 # =========================
 
@@ -171,6 +189,8 @@ def render(
 
     # Build the exact text that will appear in every row.
     for symbol, price, change in rows:
+
+        display_symbol = get_display_symbol(symbol)
 
         if price is None or change is None:
             price_text = "Unavailable"
@@ -196,14 +216,14 @@ def render(
 
         prepared_rows.append(
             (
-                symbol,
+                display_symbol,
                 price_text,
                 change_text,
                 change_color,
             )
         )
 
-    # Create a tiny temporary image only for measuring text.
+    # Tiny temporary image used only for measuring text.
     dummy_image = Image.new(
         "RGBA",
         (1, 1),
@@ -212,7 +232,7 @@ def render(
 
     measure = ImageDraw.Draw(dummy_image)
 
-    # Measure the widest ticker.
+    # Measure widest ticker.
     ticker_width = max(
         measure.textbbox(
             (0, 0),
@@ -222,7 +242,7 @@ def render(
         for ticker, _, _, _ in prepared_rows
     )
 
-    # Measure the widest price.
+    # Measure widest price.
     price_width = max(
         measure.textbbox(
             (0, 0),
@@ -232,7 +252,7 @@ def render(
         for _, price_text, _, _ in prepared_rows
     )
 
-    # Measure the widest percentage-change value.
+    # Measure widest percentage-change value.
     change_width = max(
         (
             measure.textbbox(
@@ -271,7 +291,7 @@ def render(
 
     draw = ImageDraw.Draw(image)
 
-    # Automatically calculate the three column positions.
+    # Automatically calculate column positions.
     ticker_x = LEFT_PADDING
 
     price_x = (
