@@ -1,3 +1,4 @@
 SPCX
 GC=F
+BTC-USD
 
